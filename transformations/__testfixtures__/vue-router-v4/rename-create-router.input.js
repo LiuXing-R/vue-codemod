@@ -13,21 +13,12 @@ const routes = [
     component: () => import(/* webpackChunkName: "about" */ '../views/About.vue')
   },
 ];
-
-const router = new VueRouter({
+const createRouter = () => new VueRouter({
+  mode: 'history',
   base: process.env.BASE_URL,
   routes
 });
 
-new VueRouter({
-  routes,
-  fallback: false
-});
-
-router.beforeEach((to,from, next) => {
-  if(from === VueRouter.START_LOCATION){
-    next('/motomo');
-  }
-});
+const router = createRouter()
 
 export default router;

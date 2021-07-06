@@ -26,10 +26,28 @@ export const transformAST: ASTTransformation = context => {
       }
     })
 
-    addImport(context, {
-      specifier: { type: 'named', imported: 'createRouter' },
-      source: 'vue-router'
+    let localCreateRouter = 'createRouter'
+    // find whether createRouter has been used
+    const createRouterIdentifiers = root.find(j.Identifier, {
+      name: 'createRouter'
     })
+    if (createRouterIdentifiers.length) {
+      // rename createRouter to newCreateRouter
+      localCreateRouter = 'newCreateRouter'
+      addImport(context, {
+        specifier: {
+          type: 'named',
+          imported: 'createRouter',
+          local: localCreateRouter
+        },
+        source: 'vue-router'
+      })
+    } else {
+      addImport(context, {
+        specifier: { type: 'named', imported: 'createRouter' },
+        source: 'vue-router'
+      })
+    }
     newVueRouter.replaceWith(({ node }) => {
       // mode: 'history' -> history: createWebHistory(), etc
       let historyMode = 'createWebHashHistory'
@@ -89,8 +107,32 @@ export const transformAST: ASTTransformation = context => {
         )
       )
 
-      return j.callExpression(j.identifier('createRouter'), node.arguments)
+      return j.callExpression(j.identifier(localCreateRouter), node.arguments)
     })
+
+    // VueRouter.START_LOCATION => import {START_LOCATION} from 'vue-router'
+    const startLocationMember = root.find(j.MemberExpression, {
+      object: {
+        type: 'Identifier',
+        name: localVueRouter
+      },
+      property: {
+        type: 'Identifier',
+        name: 'START_LOCATION'
+      }
+    })
+
+    if (startLocationMember.length) {
+      addImport(context, {
+        specifier: { type: 'named', imported: 'START_LOCATION' },
+        source: 'vue-router'
+      })
+
+      startLocationMember.replaceWith(({ node }) => {
+        return node.property
+      })
+    }
+
     removeExtraneousImport(context, {
       localBinding: localVueRouter
     })
